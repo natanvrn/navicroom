@@ -1,0 +1,16 @@
+{
+  "name": "NAVICROOM Photo Editor",
+  "short_name": "NAVICROOM",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=512&h=512&fit=crop",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
