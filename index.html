@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAVICROOM - iOS Photo Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <style>
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #ffd60a;
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #ffd60a;
+            cursor: pointer;
+            border: none;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-black text-white font-sans h-screen flex flex-col justify-between overflow-hidden select-none">
+
+    <!-- Top Navigation Bar -->
+    <header class="flex justify-between items-center px-4 py-3 bg-zinc-950 border-b border-zinc-900 z-10">
+        <div class="flex items-center gap-2">
+            <svg class="w-6 h-6 text-[#ffd60a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <span class="font-black tracking-widest text-sm text-zinc-100">NAVICROOM</span>
+        </div>
+        <div class="flex gap-4">
+            <button id="cameraBtn" class="text-zinc-400 hover:text-white transition text-xs font-medium bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-800 flex items-center gap-1">
+                📷 Kamera Realtime
+            </button>
+            <button id="saveBtn" class="text-[#ffd60a] hover:text-yellow-300 font-semibold text-sm tracking-wide hidden">Done</button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Area -->
+    <main class="flex-1 flex flex-col items-center justify-center relative p-4 bg-black">
+        <!-- Live Video Element (Hidden by default) -->
+        <video id="video" class="max-h-[50vh] max-w-full rounded-lg hidden object-contain" autoplay playsinline></video>
+        
+        <!-- Upload Placeholder Box -->
+        <div id="uploadBox" class="border-2 border-dashed border-zinc-800 rounded-2xl p-8 text-center max-w-sm cursor-pointer hover:border-zinc-700 transition">
+            <p class="text-zinc-500 text-sm mb-3">Tarik & lepas foto Anda di sini, potret menggunakan kamera, atau klik tombol di bawah ini</p>
+            <input type="file" id="imageInput" accept="image/*" class="hidden">
+            <button onclick="document.getElementById('imageInput').click()" class="bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs px-4 py-2 rounded-lg border border-zinc-800 transition">Pilih Foto</button>
+        </div>
+
+        <!-- Canvas & Image Workspace -->
+        <div id="imageContainer" class="relative hidden max-h-[50vh] max-w-full flex items-center justify-center">
+            <img id="previewImage" class="max-h-[50vh] max-w-full object-contain transition-all duration-75" alt="Preview">
+        </div>
+        <canvas id="canvas" class="hidden"></canvas>
+    </header>
+
+    <!-- iOS Control Panel Panel -->
+    <footer id="controlPanel" class="bg-zinc-950 border-t border-zinc-900 px-4 py-6 flex flex-col gap-5 z-10 opacity-40 pointer-events-none transition-opacity duration-300">
+        
+        <!-- Value Display & Reset Action -->
+        <div class="text-center h-5">
+            <span id="sliderValue" class="text-[#ffd60a] text-xs font-semibold tracking-wider uppercase"></span>
+        </div>
+
+        <!-- Master Slider Component -->
+        <div class="px-6 flex items-center justify-center">
+            <input type="range" id="masterSlider" min="-100" max="100" value="0" class="w-full max-w-md h-[2px] bg-zinc-800 appearance-none outline-none rounded">
+        </div>
+
+        <!-- Adjustment Sub-menu (Scrollable Row) -->
+        <div id="adjustPanel" class="flex gap-6 overflow-x-auto py-2 px-4 hide-scrollbar justify-start md:justify-center">
+            <button data-setting="brightness" class="adjust-btn flex flex-col items-center gap-1.5 flex-shrink-0 text-zinc-500">
+                <span class="w-10 h-10 rounded-full border border-zinc-800 flex items-center justify-center text-sm font-bold bg-zinc-900 transition">🔆</span>
+                <span class="text-[10px] font-medium tracking-tight">Exposure</span>
+                <div class="dot w-1 h-1 bg-transparent rounded-full mt-0.5"></div>
+            </button>
+            <button data-setting="contrast" class="adjust-btn flex flex-col items-center gap-1.5 flex-shrink-0 text-zinc-500">
+                <span class="w-10 h-10 rounded-full border border-zinc-800 flex items-center justify-center text-sm font-bold bg-zinc-900 transition">◑</span>
+                <span class="text-[10px] font-medium tracking-tight">Contrast</span>
+                <div class="dot w-1 h-1 bg-transparent rounded-full mt-0.5"></div>
+            </button>
+            <button data-setting="saturation" class="adjust-btn flex flex-col items-center gap-1.5 flex-shrink-0 text-zinc-500">
+                <span class="w-10 h-10 rounded-full border border-zinc-800 flex items-center justify-center text-sm font-bold bg-zinc-900 transition">🎨</span>
+                <span class="text-[10px] font-medium tracking-tight">Saturation</span>
+                <div class="dot w-1 h-1 bg-transparent rounded-full mt-0.5"></div>
+            </button>
+            <button data-setting="blur" class="adjust-btn flex flex-col items-center gap-1.5 flex-shrink-0 text-zinc-500">
+                <span class="w-10 h-10 rounded-full border border-zinc-800 flex items-center justify-center text-sm font-bold bg-zinc-900 transition">💧</span>
+                <span class="text-[10px] font-medium tracking-tight">Blur</span>
+                <div class="dot w-1 h-1 bg-transparent rounded-full mt-0.5"></div>
+            </button>
+            <button data-setting="hue" class="adjust-btn flex flex-col items-center gap-1.5 flex-shrink-0 text-zinc-500">
+                <span class="w-10 h-10 rounded-full border border-zinc-800 flex items-center justify-center text-sm font-bold bg-zinc-900 transition">◵</span>
+                <span class="text-[10px] font-medium tracking-tight">Tint</span>
+                <div class="dot w-1 h-1 bg-transparent rounded-full mt-0.5"></div>
+            </button>
+        </div>
+
+        <!-- Filters Preset Sub-menu -->
+        <div id="filterPanel" class="hidden flex gap-4 overflow-x-auto py-2 px-4 hide-scrollbar justify-start md:justify-center">
+            <button data-filter="none" class="filter-btn flex flex-col items-center gap-1.5 flex-shrink-0 text-[#ffd60a]">
+                <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=60&h=60&q=80" class="filter-thumb w-12 h-12 rounded-lg object-cover border-2 border-[#ffd60a]" alt="Original">
+                <span class="text-[10px] font-semibold">Original</span>
+            </button>
+            <button data-filter="vivid" class="filter-btn flex flex-col items-center gap-1.5 flex-shrink-0 text-zinc-500">
+                <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=60&h=60&q=80" class="filter-thumb w-12 h-12 rounded-lg object-cover border border-zinc-800" style="filter: saturate(1.6) brightness(1.1);" alt="Vivid">
+                <span class="text-[10px] font-medium">Vivid</span>
+            </button>
+            <button data-filter="dramatic" class="filter-btn flex flex-col items-center gap-1.5 flex-shrink-0 text-zinc-500">
+                <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=60&h=60&q=80" class="filter-thumb w-12 h-12 rounded-lg object-cover border border-zinc-800" style="filter: contrast(1.4) brightness(0.9) saturate(0.8);" alt="Dramatic">
+                <span class="text-[10px] font-medium">Dramatic</span>
+            </button>
+            <button data-filter="mono" class="filter-btn flex flex-col items-center gap-1.5 flex-shrink-0 text-zinc-500">
+                <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=60&h=60&q=80" class="filter-thumb w-12 h-12 rounded-lg object-cover border border-zinc-800" style="filter: grayscale(1);" alt="Mono">
+                <span class="text-[10px] font-medium">Mono</span>
+            </button>
+            <button data-filter="sepia" class="filter-btn flex flex-col items-center gap-1.5 flex-shrink-0 text-zinc-500">
+                <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=60&h=60&q=80" class="filter-thumb w-12 h-12 rounded-lg object-cover border border-zinc-800" style="filter: sepia(0.8) contrast(1.1);" alt="Sepia">
+                <span class="text-[10px] font-medium">Sepia</span>
+            </button>
+        </div>
+
+        <!-- Main Mode Tabs (Adjust vs Filters) -->
+        <div class="flex justify-center border-t border-zinc-900 pt-4 gap-12 text-xs font-semibold tracking-wider uppercase text-zinc-500">
+            <button id="tabAdjust" class="text-white border-b-2 border-white pb-1">Adjust</button>
+            <button id="tabFilters" class="pb-1">Filters</button>
+        </div>
+    </footer>
+
+    <!-- Logic Script for iOS Image Editor Features -->
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const previewImage = document.getElementById('previewImage');
+        const uploadBox = document.getElementById('uploadBox');
+        const imageContainer = document.getElementById('imageContainer');
+        const controlPanel = document.getElementById('controlPanel');
+        const masterSlider = document.getElementById('masterSlider');
+        const sliderValue = document.getElementById('sliderValue');
+        const adjustBtns = document.querySelectorAll('.adjust-btn');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const filterThumbs = document.querySelectorAll('.filter-thumb');
+        const saveBtn = document.getElementById('saveBtn');
+        const cameraBtn = document.getElementById('cameraBtn');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+
+        // Navigation Tabs Toggle
+        document.getElementById('tabAdjust').addEventListener('click', function() {
+            this.classList.add('text-white', 'border-b-2', 'border-white');
+            document.getElementById('tabFilters').classList.remove('text-white', 'border-b-2', 'border-white');
+            document.getElementById('adjustPanel').classList.remove('hidden');
+            document.getElementById('filterPanel').classList.add('hidden');
+            selectAdjustment(currentSetting);
+        });
+
+        document.getElementById('tabFilters').addEventListener('click', function() {
+            this.classList.add('text-white', 'border-b-2', 'border-white');
+            document.getElementById('tabAdjust').classList.remove('text-white', 'border-b-2', 'border-white');
+            document.getElementById('filterPanel').classList.remove('hidden');
+            document.getElementById('adjustPanel').classList.add('hidden');
+            masterSlider.style.visibility = 'hidden';
+            sliderValue.textContent = 'Presets';
+        });
+
+        // App Engine Core State
+        let currentSetting = 'brightness';
+        let activeFilter = 'none';
+        let originalImgDataUrl = null;
+        let isUsingCamera = false;
+        let streamRef = null;
+
+        const settings = { brightness: 0, contrast: 0, saturation: 0, blur: 0, hue: 0 };
+        const metadata = {
+            brightness: { min: -100, max: 100, step: 1, label: 'Exposure' },
+            contrast: { min: -100, max: 100, step: 1, label: 'Contrast' },
+            saturation: { min: -100, max: 100, step: 1, label: 'Saturation' },
+            blur: { min: 0, max: 100, step: 1, label: 'Blur' },
+            hue: { min: -180, max: 180, step: 2, label: 'Tint' }
+        };
+
+        // File Intake Management
+        imageInput.addEventListener('change', function(e) {
+            if(e.target.files.length) { loadSourceImage(URL.createObjectURL(e.target.files[0])); }
+        });
+
+        uploadBox.addEventListener('click', () => imageInput.click());
+        uploadBox.addEventListener('dragover', (e) => { e.preventDefault(); uploadBox.classList.add('border-[#ffd60a]'); });
+        uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('border-[#ffd60a]'));
+        uploadBox.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if(e.dataTransfer.files.length) { loadSourceImage(URL.createObjectURL(e.dataTransfer.files[0])); }
+        });
+
+        // Mobile Camera Stream Controls
+        cameraBtn.addEventListener('click', async () => {
+            if (!isUsingCamera) {
+                try {
+                    streamRef = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+                    video.srcObject = streamRef;
+                    video.classList.remove('hidden');
+                    uploadBox.classList.add('hidden');
+                    imageContainer.classList.add('hidden');
+                    cameraBtn.textContent = '📸 Ambil Foto';
+                    cameraBtn.classList.add('bg-[#ffd60a]', 'text-black');
+                    isUsingCamera = true;
+                } catch (err) {
+                    alert('Tidak dapat mengakses kamera perangkat.');
+                }
+            } else {
+                // Shutter Capture Action
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Shutdown Camera Stream cleanly
+                if (streamRef) { streamRef.getTracks().forEach(track => track.stop()); }
+                video.classList.add('hidden');
+                
+                loadSourceImage(canvas.toDataURL('image/jpeg'));
+                cameraBtn.textContent = '📷 Kamera Realtime';
+                cameraBtn.classList.remove('bg-[#ffd60a]', 'text-black');
+                isUsingCamera = false;
+            }
+        });
+
+        function loadSourceImage(src) {
+            originalImgDataUrl = src;
+            previewImage.src = src;
+            
+            previewImage.onload = function() {
+                // Dynamic live thumbnails population
+                filterThumbs.forEach(thumb => thumb.src = src);
+                uploadBox.classList.add('hidden');
+                imageContainer.classList.remove('hidden');
+                controlPanel.classList.remove('opacity-40', 'pointer-events-none');
+                saveBtn.classList.remove('hidden');
+                selectAdjustment('brightness');
+            }
+        }
+
+        // Selection Handlers
+        function selectAdjustment(setting) {
+            currentSetting = setting;
+            masterSlider.style.visibility = 'visible';
+            adjustBtns.forEach(btn => {
+                if(btn.dataset.setting === setting) {
+                    btn.classList.add('text-[#ffd60a]');
+                    btn.querySelector('span').classList.add('border-[#ffd60a]', 'bg-zinc-950');
+                } else {
+                    btn.classList.remove('text-[#ffd60a]');
+                    btn.querySelector('span').classList.remove('border-[#ffd60a]', 'bg-zinc-950');
+                }
+            });
+
+            const data = metadata[setting];
+            masterSlider.min = data.min;
+            masterSlider.max = data.max;
+            masterSlider.step = data.step;
+            masterSlider.value = settings[setting];
+            updateSliderDisplay(settings[setting]);
+        }
+
+        adjustBtns.forEach(btn => {
+            btn.addEventListener('click', () => selectAdjustment(btn.dataset.setting));
+        });
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                filterBtns.forEach(b => {
+                    b.classList.remove('text-[#ffd60a]');
+                    b.querySelector('img').classList.remove('border-[#ffd60a]');
+                });
+                this.classList.add('text-[#ffd60a]');
+                this.querySelector('img').classList.add('border-[#ffd60a]');
+                activeFilter = this.dataset.filter;
+                applyFilters();
+            });
+        });
+
+        // Realtime Rendering Pipeline
+        masterSlider.addEventListener('input', function() {
+            const val = parseInt(this.value);
+            settings[currentSetting] = val;
+            updateSliderDisplay(val);
+            
+            const btn = document.querySelector(`[data-setting="${currentSetting}"]`);
+            const dot = btn.querySelector('.dot');
+            if(val !== 0) {
+                dot.classList.remove('bg-transparent');
+                dot.classList.add('bg-[#ffd60a]');
+            } else {
+                dot.classList.remove('bg-[#ffd60a]');
+                dot.classList.add('bg-transparent');
+            }
+            applyFilters();
+        });
+
+        function updateSliderDisplay(value) {
+            const label = metadata[currentSetting].label;
+            sliderValue.textContent = value > 0 ? `${label} +${value}` : `${label} ${value}`;
+        }
+
+        function buildCssFilterString() {
+            // Conversion matrices from user slider to Web CSS Standards
+            let b = 100 + settings.brightness;
+            let c = 100 + settings.contrast;
+            let s = 100 + settings.saturation;
+            let bl = settings.blur * 0.15;
+            let h = settings.hue;
+
+            let filterStr = `brightness(${b}%) contrast(${c}%) saturate(${s}%) blur(${bl}px) hue-rotate(${h}deg)`;
+
+            // Layering iOS Look LUTs on top
+            if(activeFilter === 'vivid') filterStr += ' saturate(140%) brightness(105%)';
+            if(activeFilter === 'dramatic') filterStr += ' contrast(130%) brightness(90%) saturate(85%)';
+            if(activeFilter === 'mono') filterStr += ' grayscale(100%) contrast(110%)';
+            if(activeFilter === 'sepia') filterStr += ' sepia(75%) contrast(100%)';
+            
+            return filterStr;
+        }
+
+        function applyFilters() {
+            previewImage.style.filter = buildCssFilterString();
+        }
+
+        // Render Canvas Exporter Pipeline
+        saveBtn.addEventListener('click', function() {
+            if(!originalImgDataUrl) return;
+            const img = new Image();
+            img.src = originalImgDataUrl;
+            img.onload = function() {
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.filter = buildCssFilterString();
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                const link = document.createElement('a');
+                link.download = `NAVICROOM_${Date.now()}.jpeg`;
+                link.href = canvas.toDataURL('image/jpeg', 0.95);
+                link.click();
+            }
+        });
+        
+        // Register PWA service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+    </script>
+</body>
+  </html>
